@@ -1,5 +1,5 @@
 INST_DIR = $(HOME)/bin
-BIN  = add_gms_to_flatfile
+BIN  = associate_events_mag
 
 # need to include the math library when the math.h header file is used
 #cflags = -O -lm

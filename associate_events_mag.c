@@ -14,7 +14,8 @@
 void delaz_(float *lat1, float *lon1, float *lat2, float *lon2, float *dist, float *az, float *baz);
 int getcols( const char * const line, const char * const delim, char ***out_storage);
 void strip(char *s);
-void assign_cols_flatfile(char **columns, float *stLat, float *stLon, float *evMag, float *evLon, float *evLat, float *evDep, int *evYear, int *evMon, int *evDay, int *evHour, int *evMin, float *evSec, char *network, char * stationNm);
+void assign_cols_flatfile(char **columns, float *evMag, int *evYear, int *evMon, int *evDay, int *evHour, int *evMin, float *evSec);
+void assign_cols_catalog(char **columns, float *evMag, int *evYear, int *evMon, int *evDay, int *evHour, int *evMin, float *evSec, float *evMagSource, char *magString);
 char * replace(char const * const original, char const * const pattern, char const * const replacement );
 int compute_epochTime(int yearIn, int monthIn, int dayIn, int hourIn, int minIn, int secIn);
 
@@ -31,7 +32,7 @@ void assign_cols_flatfile(char **columns, float *evMag, int *evYear, int *evMon,
   *evHour=atoi(columns[3]);
   *evMin=atoi(columns[4]);
   *evSec=atof(columns[5]);
-  fprintf(stderr,"assign_cols_flatfile, year/month/day/hour/min/sec/Mag: %d %d %d %d %d %.2f %f\n", *evYear, *evMon, *evDay, *evHour, *evMin, *evSec, *evMag);
+//  fprintf(stderr,"assign_cols_flatfile, year/month/day/hour/min/sec/Mag: %d %d %d %d %d %.2f %f\n", *evYear, *evMon, *evDay, *evHour, *evMin, *evSec, *evMag);
 
 }
 
@@ -40,7 +41,7 @@ void assign_cols_catalog(char **columns, float *evMag, int *evYear, int *evMon, 
 /*--------------------------------------------------------------------------*/
 {
 //
-  *evMag=atof(columns[1]);
+  *evMag=atof(columns[0]);
   *evYear=atoi(columns[4]);
   *evMon=atoi(columns[5]);
   *evDay=atoi(columns[6]);
@@ -48,8 +49,8 @@ void assign_cols_catalog(char **columns, float *evMag, int *evYear, int *evMon, 
   *evMin=atoi(columns[8]);
   *evSec=atof(columns[9]);
   *evMagSource=atof(columns[15]);
-  evMagString=strcpy(evMagString,columns[14]);
-  fprintf(stderr,"assign_cols_catalog, year/month/day/hour/min/sec/Mag/MagSource/MagString: %d %d %d %d %d %.2f %f %f %s\n", *evYear, *evMon, *evDay, *evHour, *evMin, *evSec, *evMag, *evMagSource, magString);
+  magString=strcpy(magString,columns[13]);
+//  fprintf(stderr,"assign_cols_catalog, year/month/day/hour/min/sec/Mag/MagSource/MagString: %d %d %d %d %d %.2f %f %f %s\n", *evYear, *evMon, *evDay, *evHour, *evMin, *evSec, *evMag, *evMagSource, magString);
 
 }
 
@@ -78,9 +79,10 @@ int main (int argc, char *argv[])
   int hlines, cnt1;
   int cols_found;
   int evYear, evMon, evDay, evHour, evMin;
-  int evYear2, evMon2, evDay2, evHour2, evMin2, evMagSource;
-  int epochTimeFlatFile, epochCatalog; 
-  float evSec, evSec2;
+  int evYear2, evMon2, evDay2, evHour2, evMin2;
+  int epochTimeFlatFile, epochTimeCatalog; 
+  float evMag, evMag2, evSec, evSec2, evMagSource;
+  float diffSec, diffMag, diffTot;
   char eventFlatFile[200], catalogFile[200], outputFile[200];
   char magString[20];
   char buff[BUFFLEN], buff2[BUFFLEN];
@@ -130,18 +132,32 @@ int main (int argc, char *argv[])
     cols_found = getcols(buff, delim, &columns);
     assign_cols_flatfile(columns, &evMag, &evYear, &evMon, &evDay, &evHour, &evMin, &evSec);
 //      for ( i = 0; i < cols_found; i++ ) printf("Column[ %d ] = %s\n", i, columns[ i ] ); 
-//    free(columns);
+    free(columns);
     epochTimeFlatFile=compute_epochTime(evYear,evMon,evDay,evHour,evMin,(int)evSec);
 // read through hazard catalog until match input event from flatfile
-  while( fgets(buff2,BUFFLEN,fpAddToFlatFile) ) {
+    while( fgets(buff2,BUFFLEN,fp_catalogFile) ) {
       strip(buff2);
       columns2 = NULL;
       cols_found = getcols(buff2, delim, &columns2);
-fprintf(stderr,"from %s",addToFlatFile);
-fprintf(stderr,"%s\n",buff2);
-      assign_cols_catalog(columns2, &stLat2, &stLon2, &evMag2, &evLon2, &evLat2, &evDep2, &evYear2, &evMon2, &evDay2, &evHour2, &evMin2, &evSec2, network2, stationNm2);
+      assign_cols_catalog(columns2, &evMag2, &evYear2, &evMon2, &evDay2, &evHour2, &evMin2, &evSec2, &evMagSource, magString);
       free(columns2);
-
+      epochTimeCatalog=compute_epochTime(evYear2,evMon2,evDay2,evHour2,evMin2,(int)evSec2);
+      diffSec=abs(epochTimeFlatFile-epochTimeCatalog);
+      diffMag=fabsf(evMag-evMag2);
+      diffTot=diffMag+(float)diffSec;
+      if (diffTot<5) {
+        fprintf(fp_outputFile,"%s,%.1f,%s",buff,evMagSource,magString);
+        fprintf(stderr,"MATCH %f %d %s\n%s\n", diffMag, diffSec, buff,buff2);
+        break;
+      }
+      else {
+        fprintf(stderr,"NO MATCH: %s\n%s\n", buff,buff2);
+        fprintf(stderr,"diffMag/Sec: %d %f\n\n", diffMag, diffSec);
+      }
+exit(1);
+    }
+    exit(1);
+  }
 
 
 
