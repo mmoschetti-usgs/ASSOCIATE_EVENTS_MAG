@@ -18,10 +18,131 @@ void assign_cols_flatfile(char **columns, float *stLat, float *stLon, float *evM
 char * replace(char const * const original, char const * const pattern, char const * const replacement );
 int compute_epochTime(int yearIn, int monthIn, int dayIn, int hourIn, int minIn, int secIn);
 
+
+/*--------------------------------------------------------------------------*/
+void assign_cols_flatfile(char **columns, float *evMag, int *evYear, int *evMon, int *evDay, int *evHour, int *evMin, float *evSec)
+/*--------------------------------------------------------------------------*/
+{
+//
+  *evMag=atof(columns[6]);
+  *evYear=atoi(columns[0]);
+  *evMon=atoi(columns[1]);
+  *evDay=atoi(columns[2]);
+  *evHour=atoi(columns[3]);
+  *evMin=atoi(columns[4]);
+  *evSec=atof(columns[5]);
+  fprintf(stderr,"assign_cols_flatfile, year/month/day/hour/min/sec/Mag: %d %d %d %d %d %.2f %f\n", *evYear, *evMon, *evDay, *evHour, *evMin, *evSec, *evMag);
+
+}
+
+/*--------------------------------------------------------------------------*/
+void assign_cols_catalog(char **columns, float *evMag, int *evYear, int *evMon, int *evDay, int *evHour, int *evMin, float *evSec, float *evMagSource, char *magString)
+/*--------------------------------------------------------------------------*/
+{
+//
+  *evMag=atof(columns[1]);
+  *evYear=atoi(columns[4]);
+  *evMon=atoi(columns[5]);
+  *evDay=atoi(columns[6]);
+  *evHour=atoi(columns[7]);
+  *evMin=atoi(columns[8]);
+  *evSec=atof(columns[9]);
+  *evMagSource=atof(columns[15]);
+  evMagString=strcpy(evMagString,columns[14]);
+  fprintf(stderr,"assign_cols_catalog, year/month/day/hour/min/sec/Mag/MagSource/MagString: %d %d %d %d %d %.2f %f %f %s\n", *evYear, *evMon, *evDay, *evHour, *evMin, *evSec, *evMag, *evMagSource, magString);
+
+}
+
+
+/*--------------------------------------------------------------------------*/
+void strip(char *s)
+/*--------------------------------------------------------------------------*/
+{
+    char *p2 = s;
+    while(*s != '\0') {
+        if(*s != '\t' && *s != '\n') {
+            *p2++ = *s++;
+        } else {
+            ++s;
+        }
+    }
+    *p2 = '\0';
+}
+
+
 /*--------------------------------------------------------------------------*/
 int main (int argc, char *argv[])
 /*--------------------------------------------------------------------------*/
 {
+  FILE *fp_eventFlatFile, *fp_catalogFile, *fp_outputFile;
+  int hlines, cnt1;
+  int cols_found;
+  int evYear, evMon, evDay, evHour, evMin;
+  int evYear2, evMon2, evDay2, evHour2, evMin2, evMagSource;
+  int epochTimeFlatFile, epochCatalog; 
+  float evSec, evSec2;
+  char eventFlatFile[200], catalogFile[200], outputFile[200];
+  char magString[20];
+  char buff[BUFFLEN], buff2[BUFFLEN];
+  char **columns;
+  char **columns2;
+  char delim[] = ",";
+
+
+/* CHECK INPUT ARGUMENTS */
+  if ( argc != 4 ) {
+    fprintf(stderr,"USAGE: %s [events from flatfile] [catalog file] [output file]\n", argv[0]);
+    fprintf(stderr,"(e.g., %s Event_list_associate_nshm_catalog_magnitude.csv emm_c2_OK_KS_201702_mod2.csv Event_list_associate_nshm_catalog_magnitude_Mod.csv\n", argv[0]);
+    exit(1);
+  }
+  sscanf(argv[1],"%s", eventFlatFile);
+  sscanf(argv[2],"%s", catalogFile);
+  sscanf(argv[3],"%s", outputFile);
+
+// open files
+  if ((fp_eventFlatFile = fopen(eventFlatFile, "r")) == NULL) {
+    fprintf(stderr,"Could not open event list from flatfile, %s\n", eventFlatFile);
+    exit(0);
+  }
+  if ((fp_catalogFile = fopen(catalogFile, "r")) == NULL) {
+    fprintf(stderr,"Could not open catalog, %s\n", catalogFile);
+    exit(0);
+  }
+  fp_outputFile = fopen(outputFile, "w");
+
+// READ/APPEND EVENT-FLATFILE
+// header lines
+  hlines=2;
+  for (cnt1=0; cnt1<hlines; cnt1++) {
+    fgets(buff,BUFFLEN,fp_eventFlatFile);
+    fprintf(fp_outputFile,"%s",buff);
+  }
+  cnt1=0;
+// loop over events from flatfile
+  while( fgets(buff,BUFFLEN,fp_eventFlatFile) ) {
+    if ( strlen(buff) > BUFFLEN ) {
+      fprintf(stderr,"Increase BUFFLEN from %d.\n", (int)BUFFLEN);
+      exit(1);
+    }
+    strip(buff);
+//     
+    columns = NULL;
+    cols_found = getcols(buff, delim, &columns);
+    assign_cols_flatfile(columns, &evMag, &evYear, &evMon, &evDay, &evHour, &evMin, &evSec);
+//      for ( i = 0; i < cols_found; i++ ) printf("Column[ %d ] = %s\n", i, columns[ i ] ); 
+//    free(columns);
+    epochTimeFlatFile=compute_epochTime(evYear,evMon,evDay,evHour,evMin,(int)evSec);
+// read through hazard catalog until match input event from flatfile
+  while( fgets(buff2,BUFFLEN,fpAddToFlatFile) ) {
+      strip(buff2);
+      columns2 = NULL;
+      cols_found = getcols(buff2, delim, &columns2);
+fprintf(stderr,"from %s",addToFlatFile);
+fprintf(stderr,"%s\n",buff2);
+      assign_cols_catalog(columns2, &stLat2, &stLon2, &evMag2, &evLon2, &evLat2, &evDep2, &evYear2, &evMon2, &evDay2, &evHour2, &evMin2, &evSec2, network2, stationNm2);
+      free(columns2);
+
+
 
 
 
