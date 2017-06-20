@@ -10,7 +10,7 @@
 int compute_epochTime(int yearIn, int monthIn, int dayIn, int hourIn, int minIn, int secIn)
 /*--------------------------------------------------------------------------*/
 {
-  int doy;
+//  int doy;
   int diffSec_int;
   double diffSec;
   struct tm timeCat; 

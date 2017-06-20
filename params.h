@@ -1,8 +1,11 @@
 #define R 6371
-#define BUFFLEN 7000
+#define BUFFLEN 200
 #define NEVENTS 5000
 
 // structures
+/*
+ * commented out catalog structure
+
 struct catDetails {
   int epochTime;
   int locationHypo, locationHD; 
@@ -16,3 +19,5 @@ struct catDetails {
   char comcatID[50];
 //  int cnt;
 } ;
+
+*/
